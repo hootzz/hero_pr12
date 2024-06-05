@@ -6,10 +6,15 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.util.AttributeSet;
 import android.view.View;
+import java.util.Map;
 
 public class MapView extends View {
     private MainActivity.Point userPosition;
-    private Paint paint;
+    private Map<String, MainActivity.Point> beaconPositions;
+    private Paint gridPaint;
+    private Paint pointPaint;
+    private Paint beaconPaint;
+    private static final int GRID_SIZE = 50; // 격자의 크기
 
     public MapView(Context context) {
         super(context);
@@ -27,8 +32,17 @@ public class MapView extends View {
     }
 
     private void init() {
-        paint = new Paint();
-        paint.setColor(Color.RED);
+        gridPaint = new Paint();
+        gridPaint.setColor(Color.LTGRAY);
+        gridPaint.setStyle(Paint.Style.STROKE);
+
+        pointPaint = new Paint();
+        pointPaint.setColor(Color.RED);
+        pointPaint.setStyle(Paint.Style.FILL);
+
+        beaconPaint = new Paint();
+        beaconPaint.setColor(Color.BLUE);
+        beaconPaint.setStyle(Paint.Style.FILL);
     }
 
     public void updateUserPosition(MainActivity.Point userPosition) {
@@ -36,12 +50,35 @@ public class MapView extends View {
         invalidate();
     }
 
+    public void updateBeaconPositions(Map<String, MainActivity.Point> beaconPositions) {
+        this.beaconPositions = beaconPositions;
+        invalidate();
+    }
+
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
+        int width = getWidth();
+        int height = getHeight();
+
+        // Draw grid
+        for (int i = 0; i <= width; i += GRID_SIZE) {
+            canvas.drawLine(i, 0, i, height, gridPaint);
+        }
+        for (int j = 0; j <= height; j += GRID_SIZE) {
+            canvas.drawLine(0, j, width, j, gridPaint);
+        }
+
+        // Draw beacon positions
+        if (beaconPositions != null) {
+            for (MainActivity.Point point : beaconPositions.values()) {
+                canvas.drawCircle((float) point.x * GRID_SIZE, (float) point.y * GRID_SIZE, 10, beaconPaint);
+            }
+        }
+
+        // Draw user position
         if (userPosition != null) {
-            // 사용자 위치 시각화 (예: 원으로 표시)
-            canvas.drawCircle((float) userPosition.x, (float) userPosition.y, 10, paint);
+            canvas.drawCircle((float) userPosition.x * GRID_SIZE, (float) userPosition.y * GRID_SIZE, 10, pointPaint);
         }
     }
 }

@@ -11,10 +11,12 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 public class MainActivity extends Activity {
     private static final int PERMISSION_REQUEST_FINE_LOCATION = 1;
@@ -64,12 +66,16 @@ public class MainActivity extends Activity {
                     distances.put(beaconId, filteredDistance);
                     if (distances.size() >= 3) {
                         Point estimatedPosition = trilateration(distances);
+                        Log.d("MainActivity", "Estimated Position: " + estimatedPosition.x + ", " + estimatedPosition.y);
                         updateLocation(estimatedPosition);
                         updateInfoTextView(estimatedPosition);
                     }
                 }
             }
         };
+
+        // 초기 비콘 위치를 설정
+        mapView.updateBeaconPositions(BEACON_LOCATIONS);
     }
 
     private void checkBluetoothPermissions() {
@@ -87,12 +93,41 @@ public class MainActivity extends Activity {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
             return;
         }
+        Log.d("MainActivity", "Starting Beacon Scan");
         bluetoothAdapter.startLeScan(leScanCallback);
     }
 
     private String getBeaconId(byte[] scanRecord) {
-        // 비콘 ID를 추출하는 로직 (UUID, Major, Minor 조합)
-        return "BEACON_1"; // 예제용 하드코딩 값
+        int startByte = 2;
+        boolean patternFound = false;
+        while (startByte <= 5) {
+            if (((int) scanRecord[startByte + 2] & 0xff) == 0x02 && // identifies an iBeacon
+                    ((int) scanRecord[startByte + 3] & 0xff) == 0x15) { // identifies correct data length
+                patternFound = true;
+                break;
+            }
+            startByte++;
+        }
+
+        if (patternFound) {
+            // Convert the scan record to a UUID
+            byte[] uuidBytes = new byte[16];
+            System.arraycopy(scanRecord, startByte + 4, uuidBytes, 0, 16);
+            ByteBuffer bb = ByteBuffer.wrap(uuidBytes);
+            long high = bb.getLong();
+            long low = bb.getLong();
+            UUID uuid = new UUID(high, low);
+
+            // Major
+            int major = (scanRecord[startByte + 20] & 0xff) * 0x100 + (scanRecord[startByte + 21] & 0xff);
+
+            // Minor
+            int minor = (scanRecord[startByte + 22] & 0xff) * 0x100 + (scanRecord[startByte + 23] & 0xff);
+
+            return uuid.toString() + "_" + major + "_" + minor;
+        }
+
+        return null;
     }
 
     private double calculateFilteredRssi(String beaconId, int rssi) {
