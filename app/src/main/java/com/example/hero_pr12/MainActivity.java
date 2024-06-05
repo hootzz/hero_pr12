@@ -11,23 +11,22 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import java.nio.ByteBuffer;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 public class MainActivity extends Activity {
     private static final int PERMISSION_REQUEST_FINE_LOCATION = 1;
     private static final int PERMISSION_REQUEST_BLUETOOTH = 2;
-    private static final Map<String, Point> BEACON_LOCATIONS = new HashMap<String, Point>() {{
-        put("BEACON_1", new Point(0, 0));
-        put("BEACON_2", new Point(10, 0));
-        put("BEACON_3", new Point(5, 10));
-    }};
+    private static final Map<String, Point> BEACON_LOCATIONS = new HashMap<>();
 
     private static final int RSSI_FILTER_SIZE = 10;
+    private static final int DEFAULT_TX_POWER = -59;
+    private Map<String, Integer> beaconTxPower = new HashMap<>();
+    private Map<String, String> beaconMacAddress = new HashMap<>();
     private Map<String, List<Integer>> rssiValues = new HashMap<>();
     private Map<String, KalmanFilter> kalmanFilters = new HashMap<>();
     private Map<String, Double> distances = new HashMap<>();
@@ -42,6 +41,8 @@ public class MainActivity extends Activity {
         mapView = findViewById(R.id.mapView);
         infoTextView = findViewById(R.id.infoTextView);
         Log.d("MainActivity", "onCreate called");
+
+        loadBeaconInfo();
 
         // 위치 권한 요청
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
@@ -58,17 +59,17 @@ public class MainActivity extends Activity {
             @Override
             public void onLeScan(BluetoothDevice device, int rssi, byte[] scanRecord) {
                 Log.d("MainActivity", "Beacon detected: " + device.getAddress());
-                String beaconId = getBeaconId(scanRecord);
-                if (beaconId != null && BEACON_LOCATIONS.containsKey(beaconId)) {
+                String beaconId = getBeaconId(device.getAddress());
+                if (beaconId != null) {
                     double filteredRssi = calculateFilteredRssi(beaconId, rssi);
-                    double distance = calculateDistance(filteredRssi);
+                    double distance = calculateDistance(beaconId, filteredRssi);
                     double filteredDistance = applyKalmanFilter(beaconId, distance);
                     distances.put(beaconId, filteredDistance);
+                    updateInfoTextView();
                     if (distances.size() >= 3) {
                         Point estimatedPosition = trilateration(distances);
                         Log.d("MainActivity", "Estimated Position: " + estimatedPosition.x + ", " + estimatedPosition.y);
                         updateLocation(estimatedPosition);
-                        updateInfoTextView(estimatedPosition);
                     }
                 }
             }
@@ -76,6 +77,30 @@ public class MainActivity extends Activity {
 
         // 초기 비콘 위치를 설정
         mapView.updateBeaconPositions(BEACON_LOCATIONS);
+    }
+
+    private void loadBeaconInfo() {
+        try {
+            BufferedReader reader = new BufferedReader(new InputStreamReader(getAssets().open("beacon_info.txt")));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(",");
+                String macAddress = parts[0];
+                String uuid = parts[1];
+                int major = Integer.parseInt(parts[2]);
+                int minor = Integer.parseInt(parts[3]);
+                int txPower = Integer.parseInt(parts[4]);
+                double x = Double.parseDouble(parts[5]);
+                double y = Double.parseDouble(parts[6]);
+                String beaconKey = uuid + "_" + major + "_" + minor;
+                BEACON_LOCATIONS.put(beaconKey, new Point(x, y));
+                beaconTxPower.put(beaconKey, txPower);
+                beaconMacAddress.put(macAddress, beaconKey);
+            }
+            reader.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void checkBluetoothPermissions() {
@@ -97,37 +122,8 @@ public class MainActivity extends Activity {
         bluetoothAdapter.startLeScan(leScanCallback);
     }
 
-    private String getBeaconId(byte[] scanRecord) {
-        int startByte = 2;
-        boolean patternFound = false;
-        while (startByte <= 5) {
-            if (((int) scanRecord[startByte + 2] & 0xff) == 0x02 && // identifies an iBeacon
-                    ((int) scanRecord[startByte + 3] & 0xff) == 0x15) { // identifies correct data length
-                patternFound = true;
-                break;
-            }
-            startByte++;
-        }
-
-        if (patternFound) {
-            // Convert the scan record to a UUID
-            byte[] uuidBytes = new byte[16];
-            System.arraycopy(scanRecord, startByte + 4, uuidBytes, 0, 16);
-            ByteBuffer bb = ByteBuffer.wrap(uuidBytes);
-            long high = bb.getLong();
-            long low = bb.getLong();
-            UUID uuid = new UUID(high, low);
-
-            // Major
-            int major = (scanRecord[startByte + 20] & 0xff) * 0x100 + (scanRecord[startByte + 21] & 0xff);
-
-            // Minor
-            int minor = (scanRecord[startByte + 22] & 0xff) * 0x100 + (scanRecord[startByte + 23] & 0xff);
-
-            return uuid.toString() + "_" + major + "_" + minor;
-        }
-
-        return null;
+    private String getBeaconId(String macAddress) {
+        return beaconMacAddress.get(macAddress);
     }
 
     private double calculateFilteredRssi(String beaconId, int rssi) {
@@ -145,8 +141,8 @@ public class MainActivity extends Activity {
         return sum / (double) values.size();
     }
 
-    private double calculateDistance(double rssi) {
-        int txPower = -59; // 비콘의 발신 신호 세기 (dBm)
+    private double calculateDistance(String beaconId, double rssi) {
+        int txPower = beaconTxPower.getOrDefault(beaconId, DEFAULT_TX_POWER);
         return Math.pow(10, (txPower - rssi) / (10 * 2));
     }
 
@@ -160,13 +156,13 @@ public class MainActivity extends Activity {
     }
 
     private Point trilateration(Map<String, Double> distances) {
-        Point p1 = BEACON_LOCATIONS.get("BEACON_1");
-        Point p2 = BEACON_LOCATIONS.get("BEACON_2");
-        Point p3 = BEACON_LOCATIONS.get("BEACON_3");
+        Point p1 = BEACON_LOCATIONS.get("fda50693-a4e2-4fb1-afcf-c6eb07647825_123_456");
+        Point p2 = BEACON_LOCATIONS.get("fda50693-a4e2-4fb1-afcf-c6eb07647826_123_457");
+        Point p3 = BEACON_LOCATIONS.get("fda50693-a4e2-4fb1-afcf-c6eb07647827_123_458");
 
-        double r1 = distances.get("BEACON_1");
-        double r2 = distances.get("BEACON_2");
-        double r3 = distances.get("BEACON_3");
+        double r1 = distances.get("fda50693-a4e2-4fb1-afcf-c6eb07647825_123_456");
+        double r2 = distances.get("fda50693-a4e2-4fb1-afcf-c6eb07647826_123_457");
+        double r3 = distances.get("fda50693-a4e2-4fb1-afcf-c6eb07647827_123_458");
 
         double A = 2 * p2.x - 2 * p1.x;
         double B = 2 * p2.y - 2 * p1.y;
@@ -185,13 +181,9 @@ public class MainActivity extends Activity {
         runOnUiThread(() -> mapView.updateUserPosition(estimatedPosition));
     }
 
-    private void updateInfoTextView(Point estimatedPosition) {
+    private void updateInfoTextView() {
         StringBuilder info = new StringBuilder();
-        info.append("Estimated Position: (")
-                .append(estimatedPosition.x)
-                .append(", ")
-                .append(estimatedPosition.y)
-                .append(")\n\nBeacons:\n");
+        info.append("Beacons:\n");
 
         for (Map.Entry<String, Double> entry : distances.entrySet()) {
             info.append("UUID: ").append(entry.getKey())
