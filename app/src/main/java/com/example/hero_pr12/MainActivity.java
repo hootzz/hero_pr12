@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class MainActivity extends Activity {
     private static final int PERMISSION_REQUEST_FINE_LOCATION = 1;
@@ -67,7 +68,8 @@ public class MainActivity extends Activity {
                     distances.put(beaconId, filteredDistance);
                     updateInfoTextView();
                     if (distances.size() >= 3) {
-                        Point estimatedPosition = trilateration(distances);
+                        Map<String, Double> strongestBeacons = getStrongestBeacons(distances, 3);
+                        Point estimatedPosition = trilateration(strongestBeacons);
                         Log.d("MainActivity", "Estimated Position: " + estimatedPosition.x + ", " + estimatedPosition.y);
                         updateLocation(estimatedPosition);
                     }
@@ -159,14 +161,22 @@ public class MainActivity extends Activity {
         return filter.filter(distance);
     }
 
-    private Point trilateration(Map<String, Double> distances) {
-        Point p1 = BEACON_LOCATIONS.get("fda50693-a4e2-4fb1-afcf-c6eb07647825_123_456");
-        Point p2 = BEACON_LOCATIONS.get("fda50693-a4e2-4fb1-afcf-c6eb07647826_123_457");
-        Point p3 = BEACON_LOCATIONS.get("fda50693-a4e2-4fb1-afcf-c6eb07647827_123_458");
+    private Map<String, Double> getStrongestBeacons(Map<String, Double> distances, int count) {
+        return distances.entrySet().stream()
+                .sorted(Map.Entry.comparingByValue())
+                .limit(count)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
 
-        double r1 = distances.get("fda50693-a4e2-4fb1-afcf-c6eb07647825_123_456");
-        double r2 = distances.get("fda50693-a4e2-4fb1-afcf-c6eb07647826_123_457");
-        double r3 = distances.get("fda50693-a4e2-4fb1-afcf-c6eb07647827_123_458");
+    private Point trilateration(Map<String, Double> distances) {
+        List<String> beacons = new ArrayList<>(distances.keySet());
+        Point p1 = BEACON_LOCATIONS.get(beacons.get(0));
+        Point p2 = BEACON_LOCATIONS.get(beacons.get(1));
+        Point p3 = BEACON_LOCATIONS.get(beacons.get(2));
+
+        double r1 = distances.get(beacons.get(0));
+        double r2 = distances.get(beacons.get(1));
+        double r3 = distances.get(beacons.get(2));
 
         double A = 2 * p2.x - 2 * p1.x;
         double B = 2 * p2.y - 2 * p1.y;
