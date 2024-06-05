@@ -9,8 +9,8 @@ import android.view.View;
 import java.util.Map;
 
 public class MapView extends View {
-    private MainActivity.Point userPosition;
-    private Map<String, MainActivity.Point> beaconPositions;
+    private Point userPosition;
+    private Map<String, Point> beaconPositions;
     private Paint gridPaint;
     private Paint pointPaint;
     private Paint beaconPaint;
@@ -45,12 +45,12 @@ public class MapView extends View {
         beaconPaint.setStyle(Paint.Style.FILL);
     }
 
-    public void updateUserPosition(MainActivity.Point userPosition) {
+    public void updateUserPosition(Point userPosition) {
         this.userPosition = userPosition;
         invalidate();
     }
 
-    public void updateBeaconPositions(Map<String, MainActivity.Point> beaconPositions) {
+    public void updateBeaconPositions(Map<String, Point> beaconPositions) {
         this.beaconPositions = beaconPositions;
         invalidate();
     }
@@ -71,7 +71,7 @@ public class MapView extends View {
 
         // Draw beacon positions
         if (beaconPositions != null) {
-            for (MainActivity.Point point : beaconPositions.values()) {
+            for (Point point : beaconPositions.values()) {
                 canvas.drawCircle((float) point.x * GRID_SIZE, (float) point.y * GRID_SIZE, 10, beaconPaint);
             }
         }

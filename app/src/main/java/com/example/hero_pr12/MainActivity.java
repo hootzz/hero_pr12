@@ -59,7 +59,7 @@ public class MainActivity extends Activity {
             public void onLeScan(BluetoothDevice device, int rssi, byte[] scanRecord) {
                 Log.d("MainActivity", "Beacon detected: " + device.getAddress());
                 String beaconId = getBeaconId(scanRecord);
-                if (BEACON_LOCATIONS.containsKey(beaconId)) {
+                if (beaconId != null && BEACON_LOCATIONS.containsKey(beaconId)) {
                     double filteredRssi = calculateFilteredRssi(beaconId, rssi);
                     double distance = calculateDistance(filteredRssi);
                     double filteredDistance = applyKalmanFilter(beaconId, distance);
@@ -200,39 +200,6 @@ public class MainActivity extends Activity {
         }
 
         runOnUiThread(() -> infoTextView.setText(info.toString()));
-    }
-
-    static class Point {
-        final double x, y;
-        Point(double x, double y) {
-            this.x = x;
-            this.y = y;
-        }
-    }
-
-    static class KalmanFilter {
-        private double Q = 0.00001;
-        private double R = 0.001;
-        private double A = 1;
-        private double B = 0;
-        private double C = 1;
-        private double cov = Double.NaN;
-        private double x = Double.NaN;
-
-        public double filter(double z) {
-            if (Double.isNaN(x)) {
-                x = 1.0 / C * z;
-                cov = 1.0 / C * R * 1.0 / C;
-            } else {
-                double predX = A * x + B * 0;
-                double predCov = A * cov * A + Q;
-
-                double K = predCov * C * 1.0 / (C * predCov * C + R);
-                x = predX + K * (z - C * predX);
-                cov = predCov - K * C * predCov;
-            }
-            return x;
-        }
     }
 
     @Override
