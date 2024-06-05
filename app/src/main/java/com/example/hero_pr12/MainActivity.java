@@ -79,6 +79,10 @@ public class MainActivity extends Activity {
         mapView.updateBeaconPositions(BEACON_LOCATIONS);
     }
 
+    private void updateLocation(Point estimatedPosition) {
+        runOnUiThread(() -> mapView.updateUserPosition(estimatedPosition));
+    }
+
     private void loadBeaconInfo() {
         try {
             BufferedReader reader = new BufferedReader(new InputStreamReader(getAssets().open("beacon_info.txt")));
@@ -175,10 +179,6 @@ public class MainActivity extends Activity {
         double y = (C * D - A * F) / (B * D - A * E);
 
         return new Point(x, y);
-    }
-
-    private void updateLocation(Point estimatedPosition) {
-        runOnUiThread(() -> mapView.updateUserPosition(estimatedPosition));
     }
 
     private void updateInfoTextView() {

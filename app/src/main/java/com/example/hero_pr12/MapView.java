@@ -9,7 +9,7 @@ import android.view.View;
 import java.util.Map;
 
 public class MapView extends View {
-    private Point userPosition;
+    private Point userPosition = new Point(0, 0); // 초기 사용자 위치를 (0, 0)으로 설정
     private Map<String, Point> beaconPositions;
     private Paint gridPaint;
     private Paint pointPaint;
@@ -60,6 +60,8 @@ public class MapView extends View {
         super.onDraw(canvas);
         int width = getWidth();
         int height = getHeight();
+        int centerX = width / 2;
+        int centerY = height / 2;
 
         // Draw grid
         for (int i = 0; i <= width; i += GRID_SIZE) {
@@ -69,16 +71,16 @@ public class MapView extends View {
             canvas.drawLine(0, j, width, j, gridPaint);
         }
 
-        // Draw beacon positions
+        // Draw beacon positions relative to the center
         if (beaconPositions != null) {
             for (Point point : beaconPositions.values()) {
-                canvas.drawCircle((float) point.x * GRID_SIZE, (float) point.y * GRID_SIZE, 10, beaconPaint);
+                float beaconX = (float) (centerX + (point.x - userPosition.x) * GRID_SIZE);
+                float beaconY = (float) (centerY - (point.y - userPosition.y) * GRID_SIZE); // Y축 방향을 맞추기 위해 -
+                canvas.drawCircle(beaconX, beaconY, 10, beaconPaint);
             }
         }
 
-        // Draw user position
-        if (userPosition != null) {
-            canvas.drawCircle((float) userPosition.x * GRID_SIZE, (float) userPosition.y * GRID_SIZE, 10, pointPaint);
-        }
+        // Draw user position at the center
+        canvas.drawCircle(centerX, centerY, 10, pointPaint);
     }
 }
