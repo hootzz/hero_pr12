@@ -76,7 +76,7 @@ public class MainActivity extends Activity {
                 }
             }
         };
-
+        // 4A - 33 - 4B - 34
         // 초기 비콘 위치를 설정
         mapView.updateBeaconPositions(BEACON_LOCATIONS);
     }
