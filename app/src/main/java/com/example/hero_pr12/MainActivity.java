@@ -1,3 +1,4 @@
+// MainActivity.java
 package com.example.hero_pr12;
 
 import android.app.Activity;
@@ -11,6 +12,7 @@ public class MainActivity extends Activity {
     private BeaconManager beaconManager;
     private PermissionHandler permissionHandler;
     private UIUpdater uiUpdater;
+    private SensorHandler sensorHandler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -25,8 +27,18 @@ public class MainActivity extends Activity {
         beaconManager = new BeaconManager(this, uiUpdater);
         permissionHandler = new PermissionHandler(this, beaconManager);
 
+        sensorHandler = new SensorHandler(this, uiUpdater);
+
         permissionHandler.checkAndRequestPermissions();
         mapView.updateBeaconPositions(BeaconInfoLoader.BEACON_LOCATIONS);
+
+        sensorHandler.start();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        sensorHandler.stop();
     }
 
     @Override
