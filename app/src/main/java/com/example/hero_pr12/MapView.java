@@ -50,11 +50,11 @@ public class MapView extends View {
         beaconPaint.setStyle(Paint.Style.FILL);
 
         arrowPaint = new Paint();
-        arrowPaint.setColor(Color.GREEN);
+        arrowPaint.setColor(Color.RED);
         arrowPaint.setStyle(Paint.Style.FILL);
 
         markerPaint = new Paint();
-        markerPaint.setColor(Color.BLUE);
+        markerPaint.setColor(Color.RED);
         markerPaint.setStyle(Paint.Style.FILL);
     }
 
