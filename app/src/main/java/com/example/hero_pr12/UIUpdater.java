@@ -1,0 +1,32 @@
+package com.example.hero_pr12;
+
+import android.widget.TextView;
+
+import java.util.Map;
+
+public class UIUpdater {
+    private final TextView infoTextView;
+    private final MapView mapView;
+
+    public UIUpdater(TextView infoTextView, MapView mapView) {
+        this.infoTextView = infoTextView;
+        this.mapView = mapView;
+    }
+
+    public void updateLocation(Point estimatedPosition) {
+        mapView.updateUserPosition(estimatedPosition);
+    }
+
+    public void updateInfoTextView(Map<String, Double> distances) {
+        StringBuilder info = new StringBuilder();
+        info.append("Beacons:\n");
+
+        for (Map.Entry<String, Double> entry : distances.entrySet()) {
+            info.append("UUID: ").append(entry.getKey())
+                    .append("\nDistance: ").append(entry.getValue())
+                    .append(" meters\n\n");
+        }
+
+        infoTextView.setText(info.toString());
+    }
+}
