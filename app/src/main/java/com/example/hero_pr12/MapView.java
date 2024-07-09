@@ -1,6 +1,7 @@
 package com.example.hero_pr12;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -10,6 +11,7 @@ import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
+
 import java.util.Map;
 
 public class MapView extends View {
@@ -93,6 +95,19 @@ public class MapView extends View {
         int height = getHeight();
         int centerX = width / 2;
         int centerY = height / 2;
+
+        // 평면도 그리기
+        Bitmap buildingPlanBitmap = BuildingPlanLoader.getBuildingPlanBitmap();
+        if (buildingPlanBitmap != null) {
+            // 평면도의 크기 가져오기
+            int planWidth = buildingPlanBitmap.getWidth();
+            int planHeight = buildingPlanBitmap.getHeight();
+
+            // 평면도를 그리드의 중앙에 맞추기 위해 위치 조정
+            float planLeft = centerX - (planWidth / 2) + 1070;
+            float planTop = centerY - (planHeight / 2) - 220;
+            canvas.drawBitmap(buildingPlanBitmap, planLeft, planTop, null);
+        }
 
         // 그리드 그리기
         for (int i = -100 * GRID_SIZE; i <= 100 * GRID_SIZE; i += GRID_SIZE) {

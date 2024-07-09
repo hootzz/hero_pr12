@@ -165,3 +165,4 @@ public class BeaconManager {
         return new Point(combinedX, combinedY);
     }
 }
+

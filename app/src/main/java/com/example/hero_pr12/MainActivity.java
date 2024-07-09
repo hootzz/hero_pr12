@@ -23,6 +23,7 @@ public class MainActivity extends Activity {
         Log.d("MainActivity", "onCreate called");
 
         BeaconInfoLoader.loadBeaconInfo(this);
+        BuildingPlanLoader.loadBuildingPlan(this, R.drawable.building_plan);
         uiUpdater = new UIUpdater(infoTextView, mapView);
         beaconManager = new BeaconManager(this, uiUpdater);
         permissionHandler = new PermissionHandler(this, beaconManager);
