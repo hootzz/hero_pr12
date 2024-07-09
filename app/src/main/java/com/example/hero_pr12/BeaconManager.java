@@ -42,7 +42,7 @@ public class BeaconManager {
                     uiUpdater.updateInfoTextView(distances);
                     if (distances.size() >= 3) {
                         Map<String, Double> strongestBeacons = getStrongestBeacons(distances, 3);
-                        Point estimatedPosition = TrilaterationCalculator.trilateration(strongestBeacons);
+                        Point estimatedPosition = TrilaterationCalculator.combinedLocalization(strongestBeacons);
                         Log.d("BeaconManager", "Estimated Position: " + estimatedPosition.x + ", " + estimatedPosition.y);
                         uiUpdater.updateLocation(estimatedPosition);
                     }
@@ -86,7 +86,12 @@ public class BeaconManager {
             filter = new ExtendedKalmanFilter();
             kalmanFilters.put(beaconId, filter);
         }
-        return filter.filter(distance);
+        // 측정값으로 거리, 제어 입력은 0으로 가정
+        double[] control = {0, 0}; // 제어 입력이 없을 경우
+        filter.predict(control);
+        filter.update(new double[] {distance, 0}); // y 좌표는 사용하지 않음
+        double[] state = filter.getState();
+        return state[0];
     }
 
     private Map<String, Double> getStrongestBeacons(Map<String, Double> distances, int count) {
