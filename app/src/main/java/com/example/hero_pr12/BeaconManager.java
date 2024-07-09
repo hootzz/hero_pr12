@@ -71,7 +71,7 @@ public class BeaconManager {
                     uiUpdater.updateInfoTextView(distances);
                     if (distances.size() >= 3) {
                         Map<String, Double> strongestBeacons = getStrongestBeacons(distances, 3);
-                        Point estimatedPosition = TrilaterationCalculator.combinedLocalization(strongestBeacons, currentAzimuth, currentAngle, currentSpeed);
+                        Point estimatedPosition = calculatePosition(strongestBeacons);
                         Log.d("BeaconManager", "Estimated Position: " + estimatedPosition.x + ", " + estimatedPosition.y);
                         updateUserPosition(estimatedPosition.x - currentUserPosition.x, estimatedPosition.y - currentUserPosition.y);
                     }
@@ -106,7 +106,8 @@ public class BeaconManager {
 
     private double calculateDistance(String beaconId, double rssi) {
         int txPower = BeaconInfoLoader.beaconTxPower.getOrDefault(beaconId, -59);
-        return Math.pow(10, (txPower - rssi) / (10 * 2));
+        double n = 2.0; // 환경에 따른 패스 로스 계수 (필요에 따라 조정)
+        return Math.pow(10, (txPower - rssi) / (10 * n));
     }
 
     private double applyKalmanFilter(String beaconId, double distance) {
@@ -128,5 +129,39 @@ public class BeaconManager {
                 .sorted(Map.Entry.comparingByValue())
                 .limit(count)
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
+    private Point calculatePosition(Map<String, Double> distances) {
+        List<String> beacons = new ArrayList<>(distances.keySet());
+        Point p1 = BeaconInfoLoader.BEACON_LOCATIONS.get(beacons.get(0));
+        Point p2 = BeaconInfoLoader.BEACON_LOCATIONS.get(beacons.get(1));
+        Point p3 = BeaconInfoLoader.BEACON_LOCATIONS.get(beacons.get(2));
+
+        double r1 = distances.get(beacons.get(0));
+        double r2 = distances.get(beacons.get(1));
+        double r3 = distances.get(beacons.get(2));
+
+        // 사용자 방향 보정
+        double angle1 = Math.atan2(p1.y - currentUserPosition.y, p1.x - currentUserPosition.x) - Math.toRadians(currentAzimuth);
+        double angle2 = Math.atan2(p2.y - currentUserPosition.y, p2.x - currentUserPosition.x) - Math.toRadians(currentAzimuth);
+        double angle3 = Math.atan2(p3.y - currentUserPosition.y, p3.x - currentUserPosition.x) - Math.toRadians(currentAzimuth);
+
+        Point adjustedP1 = new Point(p1.x + r1 * Math.cos(angle1), p1.y + r1 * Math.sin(angle1));
+        Point adjustedP2 = new Point(p2.x + r2 * Math.cos(angle2), p2.y + r2 * Math.sin(angle2));
+        Point adjustedP3 = new Point(p3.x + r3 * Math.cos(angle3), p3.y + r3 * Math.sin(angle3));
+
+        // 삼변 측량과 삼각 측량 결합
+        Point trilaterationPoint = TrilaterationCalculator.trilateration(distances);
+        Point triangulationPoint = TrilaterationCalculator.triangulation(adjustedP1, adjustedP2, adjustedP3, r1, r2, r3);
+
+        // 결합 위치 계산 (단순 평균)
+        double combinedX = (trilaterationPoint.x + triangulationPoint.x) / 2.0;
+        double combinedY = (trilaterationPoint.y + triangulationPoint.y) / 2.0;
+
+        // 사용자 이동 방향과 거리 보정
+        combinedX += Math.cos(Math.toRadians(currentAzimuth)) * currentSpeed;
+        combinedY += Math.sin(Math.toRadians(currentAzimuth)) * currentSpeed;
+
+        return new Point(combinedX, combinedY);
     }
 }

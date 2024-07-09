@@ -6,7 +6,7 @@ import java.util.Map;
 
 public class TrilaterationCalculator {
 
-    private static final double BEACON_RANGE = 10.0; // 예제 비콘 범위 값 (단위: 미터)
+    private static final double BEACON_RANGE = 50.0; // 예제 비콘 범위 값 (단위: 미터)
 
     // 삼변 측량 메소드
     public static Point trilateration(Map<String, Double> distances) {
