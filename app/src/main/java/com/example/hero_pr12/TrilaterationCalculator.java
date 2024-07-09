@@ -6,7 +6,7 @@ import java.util.Map;
 
 public class TrilaterationCalculator {
 
-    // Trilateration method
+    // 삼변 측량 메소드
     public static Point trilateration(Map<String, Double> distances) {
         List<String> beacons = new ArrayList<>(distances.keySet());
         Point p1 = BeaconInfoLoader.BEACON_LOCATIONS.get(beacons.get(0));
@@ -30,7 +30,7 @@ public class TrilaterationCalculator {
         return new Point(x, y);
     }
 
-    // Triangulation method
+    // 삼각 측량 메소드
     public static Point triangulation(Point p1, Point p2, Point p3, double r1, double r2, double r3) {
         double A = p2.x - p1.x;
         double B = p2.y - p1.y;
@@ -46,7 +46,34 @@ public class TrilaterationCalculator {
         return new Point(x, y);
     }
 
-    // Combined localization method
+    // IWCA 적용 메소드
+    public static double adjustDistanceWithIWCA(Point p1, Point p2, Point p3, Point estimatedPoint, double r1, double r2, double r3) {
+        double volume = calculateTetrahedronVolume(p1, p2, p3, estimatedPoint);
+        return volume / (r1 + r2 + r3);
+    }
+
+    // 사면체 부피 계산 메소드
+    private static double calculateTetrahedronVolume(Point p1, Point p2, Point p3, Point estimatedPoint) {
+        double[][] matrix = {
+                {p1.x - estimatedPoint.x, p1.y - estimatedPoint.y, 0},
+                {p2.x - estimatedPoint.x, p2.y - estimatedPoint.y, 0},
+                {p3.x - estimatedPoint.x, p3.y - estimatedPoint.y, 0}
+        };
+        double determinant = matrix[0][0] * (matrix[1][1] * matrix[2][2] - matrix[2][1] * matrix[1][2])
+                - matrix[0][1] * (matrix[1][0] * matrix[2][2] - matrix[2][0] * matrix[1][2])
+                + matrix[0][2] * (matrix[1][0] * matrix[2][1] - matrix[2][0] * matrix[1][1]);
+        return Math.abs(determinant / 6.0);
+    }
+
+    // RE 알고리즘 적용 메소드
+    public static double applyRegressionEstimation(double rssi) {
+        // 회귀 분석 모델 적용 (예: y = ax + b)
+        double a = -0.1; // 예제 계수
+        double b = 0.5;  // 예제 절편
+        return a * rssi + b;
+    }
+
+    // 결합된 위치 추정 메소드
     public static Point combinedLocalization(Map<String, Double> distances) {
         List<String> beacons = new ArrayList<>(distances.keySet());
         Point p1 = BeaconInfoLoader.BEACON_LOCATIONS.get(beacons.get(0));
@@ -57,13 +84,19 @@ public class TrilaterationCalculator {
         double r2 = distances.get(beacons.get(1));
         double r3 = distances.get(beacons.get(2));
 
-        // Trilateration
+        // 삼변 측량
         Point trilaterationPoint = trilateration(distances);
 
-        // Triangulation
+        // 삼각 측량
         Point triangulationPoint = triangulation(p1, p2, p3, r1, r2, r3);
 
-        // Combine results
+        // IWCA 적용
+        double iwcaAdjustedDistance = adjustDistanceWithIWCA(p1, p2, p3, trilaterationPoint, r1, r2, r3);
+
+        // RE 알고리즘 적용
+        double reAdjustedDistance = applyRegressionEstimation(iwcaAdjustedDistance);
+
+        // 최종 결합 위치 계산 (단순 평균을 사용)
         double combinedX = (trilaterationPoint.x + triangulationPoint.x) / 2.0;
         double combinedY = (trilaterationPoint.y + triangulationPoint.y) / 2.0;
 
