@@ -1,4 +1,3 @@
-// SensorHandler.java
 package com.example.hero_pr12;
 
 import android.content.Context;
