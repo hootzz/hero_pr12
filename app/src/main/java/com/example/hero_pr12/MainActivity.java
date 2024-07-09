@@ -1,4 +1,3 @@
-// MainActivity.java
 package com.example.hero_pr12;
 
 import android.app.Activity;

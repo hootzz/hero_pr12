@@ -1,3 +1,4 @@
+//비콘 정보(위치,전송전력(TxPower), MAC주소 등) 로드&저장
 package com.example.hero_pr12;
 
 import android.content.Context;
@@ -16,9 +17,12 @@ public class BeaconInfoLoader {
 
     public static void loadBeaconInfo(Context context) {
         try {
+            //애플리케이션의 자원에서 beacon_info.txt 파일을 읽어옴
             BufferedReader reader = new BufferedReader(new InputStreamReader(context.getAssets().open("beacon_info.txt")));
             String line;
+            // 파일의 각 줄을 읽어서 처리
             while ((line = reader.readLine()) != null) {
+                // 쉼표로 구분된 각 부분을 배열로 분리
                 String[] parts = line.split(",");
                 String macAddress = parts[0];
                 String uuid = parts[1];
@@ -28,7 +32,9 @@ public class BeaconInfoLoader {
                 double x = Double.parseDouble(parts[5]);
                 double y = Double.parseDouble(parts[6]);
                 int color = Color.parseColor(parts[7]);
+                //비콘의 고유키 생성
                 String beaconKey = uuid + "_" + major + "_" + minor;
+                //비콘의 위치정보, 전송전력, MAC주소, 색상정보 저장
                 BEACON_LOCATIONS.put(beaconKey, new Point(x, y));
                 beaconTxPower.put(beaconKey, txPower);
                 beaconMacAddress.put(macAddress, beaconKey);

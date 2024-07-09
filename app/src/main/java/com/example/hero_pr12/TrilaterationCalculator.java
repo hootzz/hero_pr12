@@ -7,14 +7,17 @@ import java.util.Map;
 public class TrilaterationCalculator {
     public static Point trilateration(Map<String, Double> distances) {
         List<String> beacons = new ArrayList<>(distances.keySet());
+        //각 비콘의 위치
         Point p1 = BeaconInfoLoader.BEACON_LOCATIONS.get(beacons.get(0));
         Point p2 = BeaconInfoLoader.BEACON_LOCATIONS.get(beacons.get(1));
         Point p3 = BeaconInfoLoader.BEACON_LOCATIONS.get(beacons.get(2));
 
+        //각 비콘과의 거리
         double r1 = distances.get(beacons.get(0));
         double r2 = distances.get(beacons.get(1));
         double r3 = distances.get(beacons.get(2));
 
+        //삼변 측량 수식을 이용해 사용자의 위치 (x, y)를 계산
         double A = 2 * p2.x - 2 * p1.x;
         double B = 2 * p2.y - 2 * p1.y;
         double C = Math.pow(r1, 2) - Math.pow(r2, 2) - Math.pow(p1.x, 2) + Math.pow(p2.x, 2) - Math.pow(p1.y, 2) + Math.pow(p2.y, 2);

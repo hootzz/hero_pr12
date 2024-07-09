@@ -11,8 +11,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
-// 필요한 임포트 추가
 import android.content.pm.PackageManager;
 
 public class BeaconManager {
@@ -20,7 +18,7 @@ public class BeaconManager {
     private final Activity activity;
     private final UIUpdater uiUpdater;
     private final Map<String, List<Integer>> rssiValues = new HashMap<>();
-    private final Map<String, KalmanFilter> kalmanFilters = new HashMap<>();
+    private final Map<String, ExtendedKalmanFilter> kalmanFilters = new HashMap<>();
     private final Map<String, Double> distances = new HashMap<>();
     private BluetoothAdapter.LeScanCallback leScanCallback;
 
@@ -83,9 +81,9 @@ public class BeaconManager {
     }
 
     private double applyKalmanFilter(String beaconId, double distance) {
-        KalmanFilter filter = kalmanFilters.get(beaconId);
+        ExtendedKalmanFilter filter = kalmanFilters.get(beaconId);
         if (filter == null) {
-            filter = new KalmanFilter();
+            filter = new ExtendedKalmanFilter();
             kalmanFilters.put(beaconId, filter);
         }
         return filter.filter(distance);

@@ -95,11 +95,11 @@ public class MapView extends View {
         int centerY = height / 2;
 
         // 그리드 그리기
-        for (int i = -centerX; i <= width; i += GRID_SIZE) {
-            canvas.drawLine(i, -centerY, i, height, gridPaint);
+        for (int i = -100 * GRID_SIZE; i <= 100 * GRID_SIZE; i += GRID_SIZE) {
+            canvas.drawLine(i, -100 * GRID_SIZE, i, 100 * GRID_SIZE, gridPaint);
         }
-        for (int j = -centerY; j <= height; j += GRID_SIZE) {
-            canvas.drawLine(-centerX, j, width, j, gridPaint);
+        for (int j = -100 * GRID_SIZE; j <= 100 * GRID_SIZE; j += GRID_SIZE) {
+            canvas.drawLine(-100 * GRID_SIZE, j, 100 * GRID_SIZE, j, gridPaint);
         }
 
         // 비콘 위치 그리기
