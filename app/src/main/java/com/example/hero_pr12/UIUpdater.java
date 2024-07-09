@@ -24,11 +24,11 @@ public class UIUpdater {
         infoTextView.setText(info.toString());
     }
 
-    public void updateLocation(Point estimatedPosition) {
-        mapView.updateUserPosition(estimatedPosition);
+    public void updateLocation(Point location) {
+        mapView.updateUserPosition(location);
     }
 
-    public void updateOrientation(float orientation) {
+    public void updateUserOrientation(float orientation) {
         mapView.updateUserOrientation(orientation);
     }
 }

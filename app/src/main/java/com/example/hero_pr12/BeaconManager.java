@@ -24,6 +24,7 @@ public class BeaconManager {
     private float currentAzimuth;
     private float currentAngle;
     private float currentSpeed;
+    private Point currentUserPosition = new Point(0, 0);
 
     public BeaconManager(Activity activity, UIUpdater uiUpdater) {
         this.activity = activity;
@@ -35,6 +36,7 @@ public class BeaconManager {
         this.currentAzimuth = azimuth;
         this.currentAngle = angle;
         this.currentSpeed = speed;
+        uiUpdater.updateUserOrientation(azimuth); // MapView에서 사용자 방향을 업데이트
     }
 
     public float getCurrentAzimuth() {
@@ -47,6 +49,12 @@ public class BeaconManager {
 
     public float getCurrentSpeed() {
         return currentSpeed;
+    }
+
+    public void updateUserPosition(double deltaX, double deltaY) {
+        currentUserPosition.x += deltaX;
+        currentUserPosition.y += deltaY;
+        uiUpdater.updateLocation(currentUserPosition);
     }
 
     private void initializeLeScanCallback() {
@@ -65,7 +73,7 @@ public class BeaconManager {
                         Map<String, Double> strongestBeacons = getStrongestBeacons(distances, 3);
                         Point estimatedPosition = TrilaterationCalculator.combinedLocalization(strongestBeacons, currentAzimuth, currentAngle, currentSpeed);
                         Log.d("BeaconManager", "Estimated Position: " + estimatedPosition.x + ", " + estimatedPosition.y);
-                        uiUpdater.updateLocation(estimatedPosition);
+                        updateUserPosition(estimatedPosition.x - currentUserPosition.x, estimatedPosition.y - currentUserPosition.y);
                     }
                 }
             }
@@ -110,7 +118,7 @@ public class BeaconManager {
         // 측정값으로 거리, 제어 입력은 0으로 가정
         double[] control = {0, 0}; // 제어 입력이 없을 경우
         filter.predict(control);
-        filter.update(new double[] {distance, 0}); // y 좌표는 사용하지 않음
+        filter.update(new double[]{distance, 0}); // y 좌표는 사용하지 않음
         double[] state = filter.getState();
         return state[0];
     }
