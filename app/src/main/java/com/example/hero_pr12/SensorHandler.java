@@ -11,14 +11,14 @@ public class SensorHandler implements SensorEventListener {
     private SensorManager sensorManager;
     private Sensor accelerometer;
     private Sensor magnetometer;
-    private UIUpdater uiUpdater;
+    private BeaconManager beaconManager;
 
     private float[] gravity;
     private float[] geomagnetic;
     private float azimuth = 0.0f;
 
-    public SensorHandler(Context context, UIUpdater uiUpdater) {
-        this.uiUpdater = uiUpdater;
+    public SensorHandler(Context context, BeaconManager beaconManager) {
+        this.beaconManager = beaconManager;
         sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         magnetometer = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
@@ -50,7 +50,7 @@ public class SensorHandler implements SensorEventListener {
                 SensorManager.getOrientation(R, orientation);
                 azimuth = (float) Math.toDegrees(orientation[0]); // orientation contains: azimuth, pitch and roll
                 azimuth = (azimuth + 360) % 360; // Convert azimuth to 0-360 degrees
-                uiUpdater.updateOrientation(azimuth);
+                beaconManager.updateOrientationData(azimuth, beaconManager.getCurrentAngle(), beaconManager.getCurrentSpeed());
                 Log.d("SensorHandler", "Azimuth: " + azimuth);
             }
         }

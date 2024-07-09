@@ -12,6 +12,7 @@ public class MainActivity extends Activity {
     private PermissionHandler permissionHandler;
     private UIUpdater uiUpdater;
     private SensorHandler sensorHandler;
+    private GyroscopeHandler gyroscopeHandler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -26,23 +27,26 @@ public class MainActivity extends Activity {
         beaconManager = new BeaconManager(this, uiUpdater);
         permissionHandler = new PermissionHandler(this, beaconManager);
 
-        sensorHandler = new SensorHandler(this, uiUpdater);
+        sensorHandler = new SensorHandler(this, beaconManager);
+        gyroscopeHandler = new GyroscopeHandler(this, beaconManager);
 
         permissionHandler.checkAndRequestPermissions();
         mapView.updateBeaconPositions(BeaconInfoLoader.BEACON_LOCATIONS);
 
         sensorHandler.start();
+        gyroscopeHandler.start();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
         sensorHandler.stop();
+        gyroscopeHandler.stop();
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        permissionHandler.onRequestPermissionsResult(requestCode, grantResults);
+        permissionHandler.onRequestPermissionsResult(requestCode, permissions, grantResults);
     }
 }

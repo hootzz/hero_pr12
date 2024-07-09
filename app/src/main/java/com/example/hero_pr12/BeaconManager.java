@@ -21,11 +21,32 @@ public class BeaconManager {
     private final Map<String, ExtendedKalmanFilter> kalmanFilters = new HashMap<>();
     private final Map<String, Double> distances = new HashMap<>();
     private BluetoothAdapter.LeScanCallback leScanCallback;
+    private float currentAzimuth;
+    private float currentAngle;
+    private float currentSpeed;
 
     public BeaconManager(Activity activity, UIUpdater uiUpdater) {
         this.activity = activity;
         this.uiUpdater = uiUpdater;
         initializeLeScanCallback();
+    }
+
+    public void updateOrientationData(float azimuth, float angle, float speed) {
+        this.currentAzimuth = azimuth;
+        this.currentAngle = angle;
+        this.currentSpeed = speed;
+    }
+
+    public float getCurrentAzimuth() {
+        return currentAzimuth;
+    }
+
+    public float getCurrentAngle() {
+        return currentAngle;
+    }
+
+    public float getCurrentSpeed() {
+        return currentSpeed;
     }
 
     private void initializeLeScanCallback() {
@@ -42,7 +63,7 @@ public class BeaconManager {
                     uiUpdater.updateInfoTextView(distances);
                     if (distances.size() >= 3) {
                         Map<String, Double> strongestBeacons = getStrongestBeacons(distances, 3);
-                        Point estimatedPosition = TrilaterationCalculator.combinedLocalization(strongestBeacons);
+                        Point estimatedPosition = TrilaterationCalculator.combinedLocalization(strongestBeacons, currentAzimuth, currentAngle, currentSpeed);
                         Log.d("BeaconManager", "Estimated Position: " + estimatedPosition.x + ", " + estimatedPosition.y);
                         uiUpdater.updateLocation(estimatedPosition);
                     }
