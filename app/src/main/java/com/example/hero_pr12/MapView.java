@@ -103,10 +103,17 @@ public class MapView extends View {
             int planWidth = buildingPlanBitmap.getWidth();
             int planHeight = buildingPlanBitmap.getHeight();
 
-            // 평면도를 그리드의 중앙에 맞추기 위해 위치 조정
-            float planLeft = centerX - (planWidth / 2) + 1070;
-            float planTop = centerY - (planHeight / 2) - 220;
-            canvas.drawBitmap(buildingPlanBitmap, planLeft, planTop, null);
+            // 평면도를 스케일 적용하여 그리기
+            float scale = 1.13f; // 원하는 스케일 값
+            float scaledWidth = planWidth * scale;
+            float scaledHeight = planHeight * scale;
+            float planLeft = centerX - (scaledWidth / 2) + 1070;
+            float planTop = centerY - (scaledHeight / 2) - 750;
+
+            canvas.save();
+            canvas.scale(scale, scale, centerX, centerY);
+            canvas.drawBitmap(buildingPlanBitmap, planLeft / scale, planTop / scale, null);
+            canvas.restore();
         }
 
         // 그리드 그리기
