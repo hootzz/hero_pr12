@@ -7,7 +7,6 @@ import android.bluetooth.BluetoothDevice;
 import android.util.Log;
 import androidx.core.app.ActivityCompat;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -151,22 +150,12 @@ public class BeaconManager {
         double r2 = distances.get(beacons.get(1));
         double r3 = distances.get(beacons.get(2));
 
-        // 사용자 방향 보정
-        double angle1 = Math.atan2(p1.y - currentUserPosition.y, p1.x - currentUserPosition.x) - Math.toRadians(currentAzimuth);
-        double angle2 = Math.atan2(p2.y - currentUserPosition.y, p2.x - currentUserPosition.x) - Math.toRadians(currentAzimuth);
-        double angle3 = Math.atan2(p3.y - currentUserPosition.y, p3.x - currentUserPosition.x) - Math.toRadians(currentAzimuth);
-
-        Point adjustedP1 = new Point(p1.x + r1 * Math.cos(angle1), p1.y + r1 * Math.sin(angle1));
-        Point adjustedP2 = new Point(p2.x + r2 * Math.cos(angle2), p2.y + r2 * Math.sin(angle2));
-        Point adjustedP3 = new Point(p3.x + r3 * Math.cos(angle3), p3.y + r3 * Math.sin(angle3));
-
-        // 삼변 측량과 삼각 측량 결합
+        // 삼변 측량
         Point trilaterationPoint = TrilaterationCalculator.trilateration(distances);
-        Point triangulationPoint = TrilaterationCalculator.triangulation(adjustedP1, adjustedP2, adjustedP3, r1, r2, r3);
 
         // 결합 위치 계산 (단순 평균)
-        double combinedX = (trilaterationPoint.x + triangulationPoint.x) / 2.0;
-        double combinedY = (trilaterationPoint.y + triangulationPoint.y) / 2.0;
+        double combinedX = trilaterationPoint.x;
+        double combinedY = trilaterationPoint.y;
 
         // 사용자 이동 방향과 거리 보정
         combinedX += Math.cos(Math.toRadians(currentAzimuth)) * currentSpeed;
