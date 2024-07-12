@@ -7,6 +7,7 @@ import android.bluetooth.BluetoothDevice;
 import android.util.Log;
 import androidx.core.app.ActivityCompat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -64,9 +65,9 @@ public class BeaconManager {
                 Log.d("BeaconManager", "Beacon detected: " + device.getAddress());
                 String beaconId = BeaconInfoLoader.beaconMacAddress.get(device.getAddress());
                 if (beaconId != null) {
-                    double filteredRssi = calculateFilteredRssi(beaconId, rssi);
-                    double distance = calculateDistance(beaconId, filteredRssi);
-                    double filteredDistance = applyKalmanFilter(beaconId, distance);
+                    double weightedAverageRssi = calculateWeightedAverageRssi(beaconId, rssi);
+                    double distance = calculateDistance(beaconId, weightedAverageRssi);
+                    double filteredDistance = applyDoubleKalmanFilter(beaconId, distance);
                     distances.put(beaconId, filteredDistance);
                     uiUpdater.updateInfoTextView(distances);
                     if (distances.size() >= 3) {
@@ -89,7 +90,7 @@ public class BeaconManager {
         bluetoothAdapter.startLeScan(leScanCallback);
     }
 
-    private double calculateFilteredRssi(String beaconId, int rssi) {
+    private double calculateWeightedAverageRssi(String beaconId, int rssi) {
         List<Integer> values = rssiValues.getOrDefault(beaconId, new ArrayList<>());
         if (values.size() >= RSSI_FILTER_SIZE) {
             values.remove(0);
@@ -97,11 +98,15 @@ public class BeaconManager {
         values.add(rssi);
         rssiValues.put(beaconId, values);
 
-        int sum = 0;
+        double weightedSum = 0;
+        double weightSum = 0;
+        double weight = 1.0;
         for (int value : values) {
-            sum += value;
+            weightedSum += value * weight;
+            weightSum += weight;
+            weight *= 0.9; // 가중치를 점차 감소시킴
         }
-        return sum / (double) values.size();
+        return weightedSum / weightSum;
     }
 
     private double calculateDistance(String beaconId, double rssi) {
@@ -110,7 +115,7 @@ public class BeaconManager {
         return Math.pow(10, (txPower - rssi) / (10 * n));
     }
 
-    private double applyKalmanFilter(String beaconId, double distance) {
+    private double applyDoubleKalmanFilter(String beaconId, double distance) {
         ExtendedKalmanFilter filter = kalmanFilters.get(beaconId);
         if (filter == null) {
             filter = new ExtendedKalmanFilter();
@@ -120,6 +125,8 @@ public class BeaconManager {
         double[] control = {0, 0}; // 제어 입력이 없을 경우
         filter.predict(control);
         filter.update(new double[]{distance, 0}); // y 좌표는 사용하지 않음
+        filter.predict(control); // 두 번째 예측 단계
+        filter.update(new double[]{distance, 0}); // 두 번째 업데이트 단계
         double[] state = filter.getState();
         return state[0];
     }
@@ -162,7 +169,12 @@ public class BeaconManager {
         combinedX += Math.cos(Math.toRadians(currentAzimuth)) * currentSpeed;
         combinedY += Math.sin(Math.toRadians(currentAzimuth)) * currentSpeed;
 
-        return new Point(combinedX, combinedY);
+        return limitToBeaconRange(new Point(combinedX, combinedY));
+    }
+
+    private Point limitToBeaconRange(Point estimatedPosition) {
+        double limitedX = Math.max(0, Math.min(estimatedPosition.x, 100)); // 비콘 범위로 값 제한, 예: 100
+        double limitedY = Math.max(0, Math.min(estimatedPosition.y, 100)); // 비콘 범위로 값 제한, 예: 100
+        return new Point(limitedX, limitedY);
     }
 }
-

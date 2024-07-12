@@ -5,12 +5,14 @@ public class ExtendedKalmanFilter {
     private double[][] R;  // 측정 노이즈 공분산 행렬
     private double[] x;    // 상태 벡터 [x, y]
     private double[][] P;  // 상태 공분산 행렬
+    private int age;       // 재귀 값 (Age)
 
     public ExtendedKalmanFilter() {
         Q = new double[][] { { 0.00001, 0 }, { 0, 0.00001 } };
         R = new double[][] { { 0.001, 0 }, { 0, 0.001 } };
         x = new double[] { 0, 0 };
         P = new double[][] { { 1, 0 }, { 0, 1 } };
+        age = 0;
     }
 
     // 상태 전이 함수
@@ -33,26 +35,41 @@ public class ExtendedKalmanFilter {
         return new double[][] { { 1, 0 }, { 0, 1 } };
     }
 
+    public void process(double[] control, double[] measurement) {
+        if (age == 0) {
+            initialize(control, measurement);
+        } else {
+            predict(control);
+            update(measurement);
+        }
+        age++;
+    }
+
+    private void initialize(double[] control, double[] measurement) {
+        // 초기화 과정
+        x = f(x, control);
+        double[][] F = F();
+        P = matrixAdd(matrixMultiply(F, matrixMultiply(P, transpose(F))), Q);
+        update(measurement);
+    }
+
     public void predict(double[] control) {
-        // 상태 예측
+        // 예측 과정
         x = f(x, control);
 
-        // 공분산 예측
         double[][] F = F();
         P = matrixAdd(matrixMultiply(F, matrixMultiply(P, transpose(F))), Q);
     }
 
     public void update(double[] measurement) {
-        // 칼만 이득 계산
+        // 추정 과정
         double[][] H = H();
         double[][] S = matrixAdd(matrixMultiply(H, matrixMultiply(P, transpose(H))), R);
         double[][] K = matrixMultiply(P, matrixMultiply(transpose(H), inverse(S)));
 
-        // 상태 갱신
         double[] y = vectorSubtract(measurement, h(x));
         x = vectorAdd(x, matrixVectorMultiply(K, y));
 
-        // 공분산 갱신
         double[][] I = identityMatrix(2);
         P = matrixMultiply(matrixSubtract(I, matrixMultiply(K, H)), P);
     }
@@ -62,8 +79,12 @@ public class ExtendedKalmanFilter {
     }
 
     // 행렬 및 벡터 연산 함수들
-    private double[][] identityMatrix(double value) {
-        return new double[][] { { value, 0 }, { 0, value } };
+    private double[][] identityMatrix(int size) {
+        double[][] result = new double[size][size];
+        for (int i = 0; i < size; i++) {
+            result[i][i] = 1;
+        }
+        return result;
     }
 
     private double[][] transpose(double[][] matrix) {
