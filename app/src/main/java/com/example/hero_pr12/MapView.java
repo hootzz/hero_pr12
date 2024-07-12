@@ -77,7 +77,7 @@ public class MapView extends View {
         invalidate();
     }
 
-    public void updateBeaconPositions(Map<String, Point> beaconPositions) {
+    public void setBeaconPositions(Map<String, Point> beaconPositions) {
         this.beaconPositions = beaconPositions;
         invalidate();
     }
@@ -103,17 +103,10 @@ public class MapView extends View {
             int planWidth = buildingPlanBitmap.getWidth();
             int planHeight = buildingPlanBitmap.getHeight();
 
-            // 평면도를 스케일 적용하여 그리기
-            float scale = 1.13f; // 원하는 스케일 값
-            float scaledWidth = planWidth * scale;
-            float scaledHeight = planHeight * scale;
-            float planLeft = centerX - (scaledWidth / 2) + 1070;
-            float planTop = centerY - (scaledHeight / 2) - 750;
-
-            canvas.save();
-            canvas.scale(scale, scale, centerX, centerY);
-            canvas.drawBitmap(buildingPlanBitmap, planLeft / scale, planTop / scale, null);
-            canvas.restore();
+            // 평면도를 그리드의 중앙에 맞추기 위해 위치 조정
+            float planLeft = centerX - (planWidth / 2) + 1070;
+            float planTop = centerY - (planHeight / 2) - 220;
+            canvas.drawBitmap(buildingPlanBitmap, planLeft, planTop, null);
         }
 
         // 그리드 그리기
@@ -129,8 +122,8 @@ public class MapView extends View {
             for (Map.Entry<String, Point> entry : beaconPositions.entrySet()) {
                 String beaconKey = entry.getKey();
                 Point point = entry.getValue();
-                float beaconX = (float) (centerX + (point.x - userPosition.x) * GRID_SIZE);
-                float beaconY = (float) (centerY - (point.y - userPosition.y) * GRID_SIZE); // Y축 방향을 맞추기 위해 -
+                float beaconX = (float) (centerX + point.x * GRID_SIZE);
+                float beaconY = (float) (centerY - point.y * GRID_SIZE); // Y축 방향을 맞추기 위해 -
                 Paint beaconPaint = new Paint();
                 beaconPaint.setColor(BeaconInfoLoader.beaconColors.get(beaconKey));
                 beaconPaint.setStyle(Paint.Style.FILL);

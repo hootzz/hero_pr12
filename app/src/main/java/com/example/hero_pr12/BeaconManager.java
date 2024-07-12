@@ -52,9 +52,12 @@ public class BeaconManager {
         return currentSpeed;
     }
 
-    public void updateUserPosition(double deltaX, double deltaY) {
-        currentUserPosition.x += deltaX;
-        currentUserPosition.y += deltaY;
+    public Point getCurrentUserPosition() {
+        return currentUserPosition;
+    }
+
+    public void updateUserPosition(Point newPosition) {
+        this.currentUserPosition = newPosition;
         uiUpdater.updateLocation(currentUserPosition);
     }
 
@@ -74,7 +77,7 @@ public class BeaconManager {
                         Map<String, Double> strongestBeacons = getStrongestBeacons(distances, 3);
                         Point estimatedPosition = calculatePosition(strongestBeacons);
                         Log.d("BeaconManager", "Estimated Position: " + estimatedPosition.x + ", " + estimatedPosition.y);
-                        updateUserPosition(estimatedPosition.x - currentUserPosition.x, estimatedPosition.y - currentUserPosition.y);
+                        updateUserPosition(estimatedPosition);
                     }
                 }
             }
@@ -169,12 +172,6 @@ public class BeaconManager {
         combinedX += Math.cos(Math.toRadians(currentAzimuth)) * currentSpeed;
         combinedY += Math.sin(Math.toRadians(currentAzimuth)) * currentSpeed;
 
-        return limitToBeaconRange(new Point(combinedX, combinedY));
-    }
-
-    private Point limitToBeaconRange(Point estimatedPosition) {
-        double limitedX = Math.max(0, Math.min(estimatedPosition.x, 100)); // 비콘 범위로 값 제한, 예: 100
-        double limitedY = Math.max(0, Math.min(estimatedPosition.y, 100)); // 비콘 범위로 값 제한, 예: 100
-        return new Point(limitedX, limitedY);
+        return new Point(combinedX, combinedY);
     }
 }

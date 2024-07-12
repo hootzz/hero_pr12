@@ -32,7 +32,6 @@ public class MainActivity extends Activity {
         gyroscopeHandler = new GyroscopeHandler(this, beaconManager);
 
         permissionHandler.checkAndRequestPermissions();
-        mapView.updateBeaconPositions(BeaconInfoLoader.BEACON_LOCATIONS);
 
         sensorHandler.start();
         gyroscopeHandler.start();

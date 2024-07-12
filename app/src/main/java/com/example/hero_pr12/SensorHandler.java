@@ -69,7 +69,8 @@ public class SensorHandler implements SensorEventListener {
         float distance = stepCount * STEP_LENGTH;
         double deltaX = distance * Math.cos(Math.toRadians(azimuth));
         double deltaY = distance * Math.sin(Math.toRadians(azimuth));
-        beaconManager.updateUserPosition(deltaX, deltaY);
+        Point newPosition = new Point(beaconManager.getCurrentUserPosition().x + deltaX, beaconManager.getCurrentUserPosition().y + deltaY);
+        beaconManager.updateUserPosition(newPosition);
     }
 
     @Override

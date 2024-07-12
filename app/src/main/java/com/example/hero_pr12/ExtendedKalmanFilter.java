@@ -6,6 +6,7 @@ public class ExtendedKalmanFilter {
     private double[] x;    // 상태 벡터 [x, y]
     private double[][] P;  // 상태 공분산 행렬
     private int age;       // 재귀 값 (Age)
+    private double Ts = 1.0; // 시간 곱 (Update period)
 
     public ExtendedKalmanFilter() {
         Q = new double[][] { { 0.00001, 0 }, { 0, 0.00001 } };
@@ -47,31 +48,74 @@ public class ExtendedKalmanFilter {
 
     private void initialize(double[] control, double[] measurement) {
         // 초기화 과정
-        x = f(x, control);
-        double[][] F = F();
-        P = matrixAdd(matrixMultiply(F, matrixMultiply(P, transpose(F))), Q);
-        update(measurement);
+        x = new double[] { 0, 0 }; // 초기 위치 설정
+        P = new double[][] { { 1, 0 }, { 0, 1 } }; // 초기 공분산 행렬 설정
+
+        // 역방향 범위의 합을 구하고 무게 중심 방법을 사용하여 초기 위치를 계산
+        double rangeSum = 0;
+        for (double value : measurement) {
+            rangeSum += 1.0 / value;
+        }
+        double initialX = 0;
+        double initialY = 0;
+        for (int i = 0; i < measurement.length; i++) {
+            initialX += (1.0 / measurement[i]) / rangeSum * control[0];
+            initialY += (1.0 / measurement[i]) / rangeSum * control[1];
+        }
+        x = new double[] { initialX, initialY };
+
+        // 측정 오차 공분산 행렬 연산을 통해 초기 공분산 행렬 설정
+        double[][] H = H();
+        double[][] HT = transpose(H);
+        double[][] HPHT = matrixMultiply(H, matrixMultiply(P, HT));
+        P = matrixAdd(HPHT, R);
+
+        age++; // 재귀횟수 증가
     }
 
     public void predict(double[] control) {
-        // 예측 과정
+        // 예측 과정 시작
+        // 1. 상태 벡터 예측
         x = f(x, control);
 
+        // 2. 상태 변이 행렬 설정
         double[][] F = F();
-        P = matrixAdd(matrixMultiply(F, matrixMultiply(P, transpose(F))), Q);
+
+        // 3. 공분산 행렬 과정의 잡음 설정
+        double[][] FT = transpose(F);
+        double[][] FPFT = matrixMultiply(F, matrixMultiply(P, FT));
+
+        // 4. 상태 오차 공분산 예측 값 산출
+        P = matrixAdd(FPFT, Q);
     }
 
     public void update(double[] measurement) {
         // 추정 과정
+        // 1. 지역 변수 초기화
         double[][] H = H();
-        double[][] S = matrixAdd(matrixMultiply(H, matrixMultiply(P, transpose(H))), R);
-        double[][] K = matrixMultiply(P, matrixMultiply(transpose(H), inverse(S)));
 
-        double[] y = vectorSubtract(measurement, h(x));
+        // 2. 상태 벡터 전송
+        double[] hx = h(x);
+
+        // 3. 관측 행렬과 관찰 잔여 값 계산
+        double[][] HT = transpose(H);
+        double[][] S = matrixAdd(matrixMultiply(H, matrixMultiply(P, HT)), R);
+        double[][] K = matrixMultiply(P, matrixMultiply(HT, inverse(S)));
+
+        // 4. 칼만 이득 계산
+        double[] y = vectorSubtract(measurement, hx);
+
+        // 5. 추정 값 계산
         x = vectorAdd(x, matrixVectorMultiply(K, y));
 
+        // 6. 오차 공분산 계산
         double[][] I = identityMatrix(2);
         P = matrixMultiply(matrixSubtract(I, matrixMultiply(K, H)), P);
+
+        // 7. 재귀 값 증가
+        age++;
+
+        // 8. 지역 변수 초기화 (필요 시)
     }
 
     public double[] getState() {
