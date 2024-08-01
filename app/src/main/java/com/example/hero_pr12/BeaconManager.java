@@ -1,6 +1,5 @@
 package com.example.hero_pr12;
 
-import android.Manifest;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -30,13 +29,14 @@ public class BeaconManager {
         this.activity = activity;
         this.uiUpdater = uiUpdater;
         initializeLeScanCallback();
+        uiUpdater.setBeaconPositions(BeaconInfoLoader.BEACON_LOCATIONS); // 비콘 위치 초기화
     }
 
     public void updateOrientationData(float azimuth, float angle, float speed) {
         this.currentAzimuth = azimuth;
         this.currentAngle = angle;
         this.currentSpeed = speed;
-        uiUpdater.updateUserOrientation(azimuth); // MapView에서 사용자 방향을 업데이트
+        uiUpdater.updateUserOrientation(azimuth);
     }
 
     public float getCurrentAzimuth() {
@@ -68,7 +68,7 @@ public class BeaconManager {
                 String beaconId = BeaconInfoLoader.beaconMacAddress.get(device.getAddress());
                 if (beaconId != null) {
                     double weightedAverageRssi = calculateWeightedAverageRssi(beaconId, rssi);
-                    double distance = calculateDistance(beaconId, weightedAverageRssi);
+                    float distance = BeaconDistanceCalculator.calculateDistance((float) weightedAverageRssi, BeaconDistanceCalculator.CALIBRATED_RSSI_AT_ONE_METER, BeaconDistanceCalculator.PATH_LOSS_PARAMETER_INDOOR);
                     double filteredDistance = applyDoubleKalmanFilter(beaconId, distance);
                     distances.put(beaconId, filteredDistance);
                     uiUpdater.updateInfoTextView(distances);
@@ -85,7 +85,7 @@ public class BeaconManager {
 
     public void startBeaconScan() {
         BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(activity, android.Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
             return;
         }
         Log.d("BeaconManager", "Starting Beacon Scan");
@@ -111,24 +111,17 @@ public class BeaconManager {
         return weightedSum / weightSum;
     }
 
-    private double calculateDistance(String beaconId, double rssi) {
-        int txPower = BeaconInfoLoader.beaconTxPower.getOrDefault(beaconId, -59);
-        double n = 2.0; // 환경에 따른 패스 로스 계수 (필요에 따라 조정)
-        return Math.pow(10, (txPower - rssi) / (10 * n));
-    }
-
-    private double applyDoubleKalmanFilter(String beaconId, double distance) {
+    private double applyDoubleKalmanFilter(String beaconId, float distance) {
         ExtendedKalmanFilter filter = kalmanFilters.get(beaconId);
         if (filter == null) {
             filter = new ExtendedKalmanFilter();
             kalmanFilters.put(beaconId, filter);
         }
-        // 측정값으로 거리, 제어 입력은 0으로 가정
-        double[] control = {0, 0}; // 제어 입력이 없을 경우
+        double[] control = {0, 0};
         filter.predict(control);
-        filter.update(new double[]{distance, 0}); // y 좌표는 사용하지 않음
-        filter.predict(control); // 두 번째 예측 단계
-        filter.update(new double[]{distance, 0}); // 두 번째 업데이트 단계
+        filter.update(new double[]{distance, 0});
+        filter.predict(control);
+        filter.update(new double[]{distance, 0});
         double[] state = filter.getState();
         return state[0];
     }
@@ -150,14 +143,12 @@ public class BeaconManager {
         double r2 = distances.get(beacons.get(1));
         double r3 = distances.get(beacons.get(2));
 
-        // 삼변 측량
         Point trilaterationPoint = TrilaterationCalculator.trilateration(distances);
+        Point triangulationPoint = TrilaterationCalculator.triangulation(p1, p2, p3, r1, r2, r3);
 
-        // 결합 위치 계산 (단순 평균)
-        double combinedX = trilaterationPoint.x;
-        double combinedY = trilaterationPoint.y;
+        double combinedX = (trilaterationPoint.x + triangulationPoint.x) / 2.0;
+        double combinedY = (trilaterationPoint.y + triangulationPoint.y) / 2.0;
 
-        // 사용자 이동 방향과 거리 보정
         combinedX += Math.cos(Math.toRadians(currentAzimuth)) * currentSpeed;
         combinedY += Math.sin(Math.toRadians(currentAzimuth)) * currentSpeed;
 

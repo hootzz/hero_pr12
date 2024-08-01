@@ -31,4 +31,8 @@ public class UIUpdater {
     public void updateUserOrientation(float orientation) {
         mapView.updateUserOrientation(orientation);
     }
+
+    public void setBeaconPositions(Map<String, Point> beaconPositions) {
+        mapView.setBeaconPositions(beaconPositions);
+    }
 }
