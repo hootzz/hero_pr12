@@ -15,13 +15,13 @@ import android.view.View;
 import java.util.Map;
 
 public class MapView extends View {
-    private Point userPosition = new Point(0, 0); // 초기 사용자 위치를 (0, 0)으로 설정
+    private Point userPosition = new Point(0, 0);
     private Map<String, Point> beaconPositions;
     private Paint gridPaint;
     private Paint pointPaint;
     private Paint arrowPaint;
     private Paint markerPaint;
-    private static final int GRID_SIZE = 50; // 기본 격자의 크기
+    private static final int GRID_SIZE = 50;
     private float userOrientation = 0.0f;
 
     private float scaleFactor = 1.0f;
@@ -86,7 +86,6 @@ public class MapView extends View {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
-        // Canvas 조작
         canvas.save();
         canvas.scale(scaleFactor, scaleFactor);
         canvas.translate(offsetX / scaleFactor, offsetY / scaleFactor);
@@ -96,34 +95,33 @@ public class MapView extends View {
         int centerX = width / 2;
         int centerY = height / 2;
 
-        // 평면도 그리기
+        // Draw building plan
         Bitmap buildingPlanBitmap = BuildingPlanLoader.getBuildingPlanBitmap();
         if (buildingPlanBitmap != null) {
-            // 평면도의 크기 가져오기
             int planWidth = buildingPlanBitmap.getWidth();
             int planHeight = buildingPlanBitmap.getHeight();
-
-            // 평면도를 그리드의 중앙에 맞추기 위해 위치 조정
-            float planLeft = (width - planWidth) / 2;
-            float planTop = (height - planHeight) / 2;
+            float planLeft = centerX - planWidth / 2f - (float)userPosition.x;
+            float planTop = centerY - planHeight / 2f - (float)userPosition.y;
             canvas.drawBitmap(buildingPlanBitmap, planLeft, planTop, null);
         }
 
-        // 그리드 그리기
+        // Draw grid
         for (int i = -100 * GRID_SIZE; i <= 100 * GRID_SIZE; i += GRID_SIZE) {
-            canvas.drawLine(i, -100 * GRID_SIZE, i, 100 * GRID_SIZE, gridPaint);
+            float x = centerX + i - (float)userPosition.x;
+            canvas.drawLine(x, -100 * GRID_SIZE, x, 100 * GRID_SIZE, gridPaint);
         }
         for (int j = -100 * GRID_SIZE; j <= 100 * GRID_SIZE; j += GRID_SIZE) {
-            canvas.drawLine(-100 * GRID_SIZE, j, 100 * GRID_SIZE, j, gridPaint);
+            float y = centerY + j - (float)userPosition.y;
+            canvas.drawLine(-100 * GRID_SIZE, y, 100 * GRID_SIZE, y, gridPaint);
         }
 
-        // 비콘 위치 그리기
+        // Draw beacons
         if (beaconPositions != null) {
             for (Map.Entry<String, Point> entry : beaconPositions.entrySet()) {
                 String beaconKey = entry.getKey();
                 Point point = entry.getValue();
-                float beaconX = (float) (point.x * GRID_SIZE);
-                float beaconY = (float) (point.y * GRID_SIZE); // Y축 방향을 맞추기 위해 -
+                float beaconX = centerX + (float)(point.x - userPosition.x) * GRID_SIZE;
+                float beaconY = centerY + (float)(point.y - userPosition.y) * GRID_SIZE;
                 Paint beaconPaint = new Paint();
                 beaconPaint.setColor(BeaconInfoLoader.beaconColors.get(beaconKey));
                 beaconPaint.setStyle(Paint.Style.FILL);
@@ -131,13 +129,13 @@ public class MapView extends View {
             }
         }
 
-        // 사용자 위치 그리기 (중앙)
+        // Draw user position (always at center)
         canvas.drawCircle(centerX, centerY, 20 / scaleFactor, pointPaint);
 
-        // 사용자 방향 삼각형 그리기
+        // Draw user direction triangle
         drawUserDirectionTriangle(canvas, centerX, centerY, userOrientation);
 
-        // 사용자 마커 그리기
+        // Draw user marker
         float markerRadius = 20 / scaleFactor;
         canvas.drawCircle(centerX, centerY, markerRadius, markerPaint);
 
@@ -188,8 +186,8 @@ public class MapView extends View {
     private class GestureListener extends GestureDetector.SimpleOnGestureListener {
         @Override
         public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
-            offsetX -= distanceX / scaleFactor;
-            offsetY -= distanceY / scaleFactor;
+            offsetX -= distanceX;
+            offsetY -= distanceY;
             invalidate();
             return true;
         }
